@@ -22,8 +22,56 @@
     <h2>Interactive D3.js Chart</h2>
     <div id="d3-chart"></div>
     
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Interactive Airline Market Share Bubble Chart</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    .tooltip {
+      position: absolute;
+      background: #fff;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 12px;
+      pointer-events: none;
+      opacity: 0;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    }
+    .dropdown {
+      margin: 10px 0;
+    }
+    .legend span {
+      margin-right: 12px;
+      font-size: 13px;
+    }
+    h2 {
+      margin-bottom: 0;
+    }
+    svg {
+      display: block;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Airline Market Share by Year</h2>
+<p>Each bubble represents one airline. Size = total passengers. Colour = most active region.</p>
+<div id="d3-chart"></div>
+  
+<div class="tooltip"></div>
+
 <script>
-const width = 960;
+const width = Math.min(960, window.innerWidth - 40);
 const height = 600;
 
 const svg = d3.select("#d3-chart")
@@ -31,27 +79,22 @@ const svg = d3.select("#d3-chart")
   .attr("width", width)
   .attr("height", height);
 
-const tooltip = d3.select("body")
-  .append("div")
-  .attr("class", "tooltip")
-  .style("opacity", 0)
-  .style("position", "absolute")
-  .style("background", "#fff")
-  .style("padding", "8px")
-  .style("border", "1px solid #ccc")
-  .style("border-radius", "4px")
-  .style("font-size", "12px")
-  .style("box-shadow", "2px 2px 6px rgba(0,0,0,0.1)");
+const tooltip = d3.select(".tooltip");
 
+let simulation, node;
+
+// Load data
 d3.csv("d3_data.csv").then(data => {
   data.forEach(d => {
     d.Year = parseInt(d.Year);
-    d["Total Passengers"] = +d["Total Passengers"];
+    d["Total Passengers"] = parseInt(d["Total Passengers"]);
   });
 
   const years = Array.from(new Set(data.map(d => d.Year))).sort((a, b) => a - b);
-  const color = d3.scaleOrdinal(d3.schemeSet2);
+  const regions = Array.from(new Set(data.map(d => d["Top Region"]))).sort();
+  const color = d3.scaleOrdinal(d3.schemeSet2).domain(regions);
 
+  // Dropdown
   const dropdown = d3.select("#d3-chart")
     .insert("div", ":first-child")
     .attr("class", "dropdown")
@@ -60,7 +103,22 @@ d3.csv("d3_data.csv").then(data => {
       <select id="year-select">
         ${years.map(year => `<option value="${year}">${year}</option>`).join("")}
       </select>
+      <button id="play-btn">Play ▶</button>
     `);
+
+  // Legend
+  const legend = d3.select("#d3-chart")
+    .append("div")
+    .attr("class", "legend");
+
+  legend.selectAll("span")
+    .data(regions)
+    .enter()
+    .append("span")
+    .html(d => `<svg width="12" height="12"><rect width="12" height="12" fill="${color(d)}" /></svg> ${d}`);
+
+  let currentYearIndex = 0;
+  let intervalId = null;
 
   function drawBubbles(selectedYear) {
     const yearData = data.filter(d => d.Year === selectedYear);
@@ -72,13 +130,13 @@ d3.csv("d3_data.csv").then(data => {
 
     svg.selectAll("*").remove();
 
-    const simulation = d3.forceSimulation(yearData)
-      .force("charge", d3.forceManyBody().strength(2))
+    simulation = d3.forceSimulation(yearData)
       .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("charge", d3.forceManyBody().strength(3))
       .force("collision", d3.forceCollide(d => radiusScale(d["Total Passengers"]) + 1))
       .on("tick", ticked);
 
-    const node = svg.selectAll("circle")
+    node = svg.selectAll("circle")
       .data(yearData)
       .enter()
       .append("circle")
@@ -87,18 +145,16 @@ d3.csv("d3_data.csv").then(data => {
         .attr("stroke", "#444")
         .attr("stroke-width", 0.5)
         .on("mouseover", function(event, d) {
-          tooltip.transition().duration(200).style("opacity", 1);
-          tooltip.html(`
-            <strong>${d["Operating Airline"]}</strong><br>
-            Year: ${d.Year}<br>
-            Region: ${d["Top Region"]}<br>
-            Passengers: ${d["Total Passengers"].toLocaleString()}
-          `)
-          .style("left", (event.pageX + 10) + "px")
-          .style("top", (event.pageY - 40) + "px");
+          tooltip
+            .style("opacity", 1)
+            .html(`<strong>${d["Operating Airline"]}</strong><br>Year: ${d.Year}<br>Region: ${d["Top Region"]}<br>Passengers: ${d["Total Passengers"].toLocaleString()}`)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 40) + "px");
         })
-        .on("mouseout", function() {
-          tooltip.transition().duration(300).style("opacity", 0);
+        .on("mouseout", () => tooltip.style("opacity", 0))
+        .on("click", function(event, d) {
+          node.attr("stroke", "#444").attr("stroke-width", 0.5);
+          d3.select(this).attr("stroke", "black").attr("stroke-width", 2);
         });
 
     function ticked() {
@@ -108,15 +164,36 @@ d3.csv("d3_data.csv").then(data => {
     }
   }
 
-  const initialYear = years[0];
-  drawBubbles(initialYear);
+  // Initial render
+  drawBubbles(years[currentYearIndex]);
 
+  // Event: Manual select
   d3.select("#year-select").on("change", function() {
     const selectedYear = +this.value;
+    currentYearIndex = years.indexOf(selectedYear);
     drawBubbles(selectedYear);
+  });
+
+  // Event: Play button
+  d3.select("#play-btn").on("click", function() {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+      this.textContent = "Play ▶";
+    } else {
+      intervalId = setInterval(() => {
+        currentYearIndex = (currentYearIndex + 1) % years.length;
+        d3.select("#year-select").property("value", years[currentYearIndex]);
+        drawBubbles(years[currentYearIndex]);
+      }, 1200);
+      this.textContent = "Pause ❚❚";
+    }
   });
 });
 </script>
+</body>
+</html>
+
 
   </section>
 
