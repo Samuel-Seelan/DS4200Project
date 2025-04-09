@@ -45,11 +45,11 @@ const tooltip = d3.select("body")
 
 d3.csv("d3_data.csv").then(data => {
   data.forEach(d => {
-    d.Year = +d.Year;
+    d.Year = parseInt(d.Year);
     d["Total Passengers"] = +d["Total Passengers"];
   });
 
-  const years = Array.from(new Set(data.map(d => d.Year))).sort();
+  const years = Array.from(new Set(data.map(d => d.Year))).sort((a, b) => a - b);
   const color = d3.scaleOrdinal(d3.schemeSet2);
 
   const dropdown = d3.select("#d3-chart")
