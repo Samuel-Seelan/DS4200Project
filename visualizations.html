@@ -21,17 +21,15 @@
   <section class="content">
     <h2>Interactive D3.js Chart</h2>
     <div id="d3-chart"></div>
-    <script>
-const margin = { top: 50, right: 30, bottom: 80, left: 140 },
-      width = 1100 - margin.left - margin.right,
-      height = 500 - margin.top - margin.bottom;
+    
+<script>
+const width = 960;
+const height = 600;
 
 const svg = d3.select("#d3-chart")
   .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
+  .attr("width", width)
+  .attr("height", height);
 
 const tooltip = d3.select("body")
   .append("div")
@@ -47,80 +45,79 @@ const tooltip = d3.select("body")
 
 d3.csv("d3_data.csv").then(data => {
   data.forEach(d => {
-    d["Normalised Count"] = +d["Normalised Count"];
-    d["Passenger Count"] = +d["Passenger Count"];
+    d.Year = +d.Year;
+    d["Total Passengers"] = +d["Total Passengers"];
   });
 
-  const allRegions = Array.from(new Set(data.map(d => d["GEO Region"]))).sort();
+  const years = Array.from(new Set(data.map(d => d.Year))).sort();
+  const color = d3.scaleOrdinal(d3.schemeSet2);
+
   const dropdown = d3.select("#d3-chart")
     .insert("div", ":first-child")
     .attr("class", "dropdown")
     .html(`
-      <label for="region-select">Filter by Region: </label>
-      <select id="region-select">
-        <option value="All">All Regions</option>
-        ${allRegions.map(region => `<option value="${region}">${region}</option>`).join("")}
+      <label for="year-select">Select Year: </label>
+      <select id="year-select">
+        ${years.map(year => `<option value="${year}">${year}</option>`).join("")}
       </select>
     `);
 
-  function update(region) {
-    const filtered = region === "All" ? data : data.filter(d => d["GEO Region"] === region);
-    const airlines = Array.from(new Set(filtered.map(d => d["Operating Airline"]))).sort();
-    const months = Array.from(new Set(filtered.map(d => d["Year-Month"]))).sort();
+  function drawBubbles(selectedYear) {
+    const yearData = data.filter(d => d.Year === selectedYear);
+    const maxPassengers = d3.max(yearData, d => d["Total Passengers"]);
 
-    const x = d3.scaleBand().domain(months).range([0, width]).padding(0.05);
-    const y = d3.scaleBand().domain(airlines).range([0, height]).padding(0.05);
-    const color = d3.scaleSequential(d3.interpolateOrRd).domain([0, 1]);
+    const radiusScale = d3.scaleSqrt()
+      .domain([0, maxPassengers])
+      .range([5, 50]);
 
     svg.selectAll("*").remove();
 
-    const xAxis = d3.axisTop(x)
-      .tickValues(x.domain().filter((d, i) => i % Math.ceil(x.domain().length / 20) === 0));
-    
-    svg.append("g")
-      .attr("transform", `translate(0, 0)`)
-      .call(d3.axisTop(x))
-      .selectAll("text")
-        .attr("transform", "rotate(-60)")
-        .style("text-anchor", "end");
+    const simulation = d3.forceSimulation(yearData)
+      .force("charge", d3.forceManyBody().strength(2))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide(d => radiusScale(d["Total Passengers"]) + 1))
+      .on("tick", ticked);
 
-    svg.append("g")
-      .call(d3.axisLeft(y));
-
-    svg.selectAll()
-      .data(filtered)
+    const node = svg.selectAll("circle")
+      .data(yearData)
       .enter()
-      .append("rect")
-        .attr("x", d => x(d["Year-Month"]))
-        .attr("y", d => y(d["Operating Airline"]))
-        .attr("width", x.bandwidth())
-        .attr("height", y.bandwidth())
-        .style("fill", d => color(d["Normalised Count"]))
+      .append("circle")
+        .attr("r", d => radiusScale(d["Total Passengers"]))
+        .attr("fill", d => color(d["Top Region"]))
+        .attr("stroke", "#444")
+        .attr("stroke-width", 0.5)
         .on("mouseover", function(event, d) {
-          tooltip.transition().duration(200).style("opacity", 0.95);
-          tooltip
-            .html(`
-              <strong>Airline:</strong> ${d["Operating Airline"]}<br>
-              <strong>Month:</strong> ${d["Year-Month"]}<br>
-              <strong>Region:</strong> ${d["GEO Region"]}<br>
-              <strong>Passengers:</strong> ${d["Passenger Count"].toLocaleString()}<br>
-              <strong>Normalised:</strong> ${(d["Normalised Count"] * 100).toFixed(1)}%
-            `)
-            .style("left", (event.pageX + 10) + "px")
-            .style("top", (event.pageY - 40) + "px");
+          tooltip.transition().duration(200).style("opacity", 1);
+          tooltip.html(`
+            <strong>${d["Operating Airline"]}</strong><br>
+            Year: ${d.Year}<br>
+            Region: ${d["Top Region"]}<br>
+            Passengers: ${d["Total Passengers"].toLocaleString()}
+          `)
+          .style("left", (event.pageX + 10) + "px")
+          .style("top", (event.pageY - 40) + "px");
         })
         .on("mouseout", function() {
           tooltip.transition().duration(300).style("opacity", 0);
         });
+
+    function ticked() {
+      node
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y);
+    }
   }
 
-  update("All");
+  const initialYear = years[0];
+  drawBubbles(initialYear);
 
-  d3.select("#region-select").on("change", function() {
-    update(this.value);
+  d3.select("#year-select").on("change", function() {
+    const selectedYear = +this.value;
+    drawBubbles(selectedYear);
   });
 });
 </script>
+
   </section>
 
   <section class="content">
