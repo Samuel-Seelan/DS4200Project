@@ -75,7 +75,7 @@ d3.csv("d3_data.csv").then(data => {
     svg.selectAll("*").remove();
 
     const xAxis = d3.axisTop(x)
-      .tickValues(x.domain().filter((d, i) => i % 6 === 0));  // every 6th month
+      .tickValues(x.domain().filter((d, i) => i % Math.ceil(x.domain().length / 20) === 0));
     
     svg.append("g")
       .attr("transform", `translate(0, 0)`)
