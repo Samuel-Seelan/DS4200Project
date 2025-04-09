@@ -21,7 +21,103 @@
   <section class="content">
     <h2>Interactive D3.js Chart</h2>
     <div id="d3-chart"></div>
-    <script src="assets/js/d3_chart.js"></script>
+    <script>
+const margin = { top: 50, right: 30, bottom: 80, left: 140 },
+      width = 1100 - margin.left - margin.right,
+      height = 500 - margin.top - margin.bottom;
+
+const svg = d3.select("#d3-chart")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+const tooltip = d3.select("body")
+  .append("div")
+  .attr("class", "tooltip")
+  .style("opacity", 0)
+  .style("position", "absolute")
+  .style("background", "#fff")
+  .style("padding", "8px")
+  .style("border", "1px solid #ccc")
+  .style("border-radius", "4px")
+  .style("font-size", "12px")
+  .style("box-shadow", "2px 2px 6px rgba(0,0,0,0.1)");
+
+d3.csv("d3_data.csv").then(data => {
+  data.forEach(d => {
+    d["Normalised Count"] = +d["Normalised Count"];
+    d["Passenger Count"] = +d["Passenger Count"];
+  });
+
+  const allRegions = Array.from(new Set(data.map(d => d["GEO Region"]))).sort();
+  const dropdown = d3.select("#d3-chart")
+    .insert("div", ":first-child")
+    .attr("class", "dropdown")
+    .html(`
+      <label for="region-select">Filter by Region: </label>
+      <select id="region-select">
+        <option value="All">All Regions</option>
+        ${allRegions.map(region => `<option value="${region}">${region}</option>`).join("")}
+      </select>
+    `);
+
+  function update(region) {
+    const filtered = region === "All" ? data : data.filter(d => d["GEO Region"] === region);
+    const airlines = Array.from(new Set(filtered.map(d => d["Operating Airline"]))).sort();
+    const months = Array.from(new Set(filtered.map(d => d["Year-Month"]))).sort();
+
+    const x = d3.scaleBand().domain(months).range([0, width]).padding(0.05);
+    const y = d3.scaleBand().domain(airlines).range([0, height]).padding(0.05);
+    const color = d3.scaleSequential(d3.interpolateOrRd).domain([0, 1]);
+
+    svg.selectAll("*").remove();
+
+    svg.append("g")
+      .attr("transform", `translate(0, 0)`)
+      .call(d3.axisTop(x))
+      .selectAll("text")
+        .attr("transform", "rotate(-60)")
+        .style("text-anchor", "end");
+
+    svg.append("g")
+      .call(d3.axisLeft(y));
+
+    svg.selectAll()
+      .data(filtered)
+      .enter()
+      .append("rect")
+        .attr("x", d => x(d["Year-Month"]))
+        .attr("y", d => y(d["Operating Airline"]))
+        .attr("width", x.bandwidth())
+        .attr("height", y.bandwidth())
+        .style("fill", d => color(d["Normalised Count"]))
+        .on("mouseover", function(event, d) {
+          tooltip.transition().duration(200).style("opacity", 0.95);
+          tooltip
+            .html(`
+              <strong>Airline:</strong> ${d["Operating Airline"]}<br>
+              <strong>Month:</strong> ${d["Year-Month"]}<br>
+              <strong>Region:</strong> ${d["GEO Region"]}<br>
+              <strong>Passengers:</strong> ${d["Passenger Count"].toLocaleString()}<br>
+              <strong>Normalised:</strong> ${(d["Normalised Count"] * 100).toFixed(1)}%
+            `)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 40) + "px");
+        })
+        .on("mouseout", function() {
+          tooltip.transition().duration(300).style("opacity", 0);
+        });
+  }
+
+  update("All");
+
+  d3.select("#region-select").on("change", function() {
+    update(this.value);
+  });
+});
+</script>
   </section>
 
   <section class="content">
