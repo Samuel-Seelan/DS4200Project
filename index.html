@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SFO Air Traffic Analysis</title>
   <link rel="stylesheet" href="styles.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -18,24 +19,28 @@
     </nav>
   </header>
 
-  <section class="intro">
-    <p>
-      Our project aims to explore the historical air traffic trends at the San Francisco International Airport (SFO) . Focusing on how passenger volume has fluctuated across airlines, regions, and time. With this focus, we have the goal to uncover patterns in travel demand and in the flow of air traffic. Moreover, we had an added curisoity on how recent global events, such as the COVID-19 pandemic, shifted the flow of traffic across terminals and boarding areas. Using static and interactive visualizations we provide a clear and engaging story about the evolution of air travel at one of the busiest airports in the U.S.
-      
-    </p>
-    <p>
-      The primary dataset we used in this project is the Air Traffic Passenger Statistics dataset, published by San Francisco International Airport and available on Kaggle. It contains 35,173 records across 15 attributes, covering monthly air traffic from 1999 to 2023. Each record includes information such as the airline name and IATA code, terminal and boarding area, region of origin or destination, and the number of passengers for a given time period. To complement this, we incorporated a COVID-19 dataset for San Francisco, containing local hospitalization and testing data sourced from the SF Department of Public Health. Together, these datasets allow us to analyze the impact of health crises on air travel and uncover long-term trends in passenger behavior.
-    </p>
+  <main class="intro">
+    <div class="card">
+      <p>
+        Our project aims to explore the historical air traffic trends at the San Francisco International Airport (SFO). Focusing on how passenger volume has fluctuated across airlines, regions, and time. With this focus, we have the goal to uncover patterns in travel demand and in the flow of air traffic.
+        Moreover, we had an added curiosity on how recent global events, such as the COVID-19 pandemic, shifted the flow of traffic across terminals and boarding areas. Using static and interactive visualizations we provide a clear and engaging story about the evolution of air travel at one of the busiest airports in the U.S.
+      </p>
 
-    <h2>Data Sources</h2>
-    <ul>
-      <li><a href="https://www.kaggle.com/datasets/mexwell/sfo-air-traffic-statistics" target="_blank">SFO Air Traffic Dataset on Kaggle</a></li>
-      <li><a href="https://www.kaggle.com/datasets/paultimothymooney/san-francisco-covid19-data" target="_blank">SF COVID-19 Data on Kaggle</a></li>
-    </ul>
-  </section>
+      <p>
+        The primary dataset we used in this project is the Air Traffic Passenger Statistics dataset, published by San Francisco International Airport and available on Kaggle. It contains 35,173 records across 15 attributes, covering monthly air traffic from 1999 to 2023. Each record includes information such as the airline name and IATA code, terminal and boarding area, region of origin or destination, and the number of passengers for a given time period.
+        To complement this, we incorporated a COVID-19 dataset for San Francisco, containing local hospitalization and testing data sourced from the SF Department of Public Health. Together, these datasets allow us to analyze the impact of health crises on air travel and uncover long-term trends in passenger behavior.
+      </p>
+
+      <h2>Data Sources</h2>
+      <ul class="data-links">
+        <li><a href="https://www.kaggle.com/datasets/mexwell/sfo-air-traffic-statistics" target="_blank">SFO Air Traffic Dataset on Kaggle</a></li>
+        <li><a href="https://www.kaggle.com/datasets/paultimothymooney/san-francisco-covid19-data" target="_blank">SF COVID-19 Data on Kaggle</a></li>
+      </ul>
+    </div>
+  </main>
 
   <footer>
-    <p>Created by Samuel Seelan · DS 4200 Project · Spring 2025</p>
+    <p>Created by Samuel Seelan, Alexander Wang, and Brandon Liu · DS 4200 Project · Spring 2025</p>
   </footer>
 
 </body>
