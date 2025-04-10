@@ -1,0 +1,154 @@
+<!-- bubble_chart.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>D3 Bubble Chart - SFO Air Traffic</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+
+  <header>
+    <h1>D3 Bubble Chart – Airline Market Share by Year</h1>
+    <nav>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="passenger_vs_covid.html">COVID Timeline</a></li>
+        <li><a href="sankey_diagram.html">Sankey</a></li>
+        <li><a href="altair_airline_region.html">Altair Chart</a></li>
+        <li><a href="covid_airline_top.html">Top Airlines</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="intro">
+    <div class="card">
+      <div id="d3-chart"></div>
+      <div class="tooltip"></div>
+      <p class="viz-description">
+        This interactive bubble chart illustrates the annual market share of airlines operating through SFO...
+      </p>
+    </div>
+  </main>
+
+  <footer>
+    <p>© 2025 Samuel Seelan, Brandon Liu, Alexander Wang — DS 4200 Project</p>
+  </footer>
+
+  <script>
+    const width = Math.min(960, window.innerWidth - 40);
+    const height = 600;
+
+    const svg = d3.select("#d3-chart")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+    const tooltip = d3.select(".tooltip");
+
+    let simulation, node;
+
+    d3.csv("d3_data.csv").then(data => {
+      data.forEach(d => {
+        d.Year = parseInt(d.Year);
+        d["Total Passengers"] = parseInt(d["Total Passengers"]);
+      });
+
+      const years = Array.from(new Set(data.map(d => d.Year))).sort((a, b) => a - b);
+      const regions = Array.from(new Set(data.map(d => d["Top Region"]))).sort();
+      const color = d3.scaleOrdinal(d3.schemeSet2).domain(regions);
+
+      const dropdown = d3.select("#d3-chart")
+        .insert("div", ":first-child")
+        .attr("class", "dropdown")
+        .html(`
+          <label for="year-select">Select Year: </label>
+          <select id="year-select">
+            ${years.map(year => `<option value="${year}">${year}</option>`).join("")}
+          </select>
+          <button id="play-btn">Play ▶</button>
+        `);
+
+      const legend = d3.select("#d3-chart")
+        .append("div")
+        .attr("class", "legend");
+
+      legend.selectAll("span")
+        .data(regions)
+        .enter()
+        .append("span")
+        .html(d => `<svg width="12" height="12"><rect width="12" height="12" fill="${color(d)}" /></svg> ${d}`);
+
+      let currentYearIndex = 0;
+      let intervalId = null;
+
+      function drawBubbles(selectedYear) {
+        const yearData = data.filter(d => d.Year === selectedYear);
+        const maxPassengers = d3.max(yearData, d => d["Total Passengers"]);
+
+        const radiusScale = d3.scaleSqrt()
+          .domain([0, maxPassengers])
+          .range([5, 50]);
+
+        svg.selectAll("*").remove();
+
+        simulation = d3.forceSimulation(yearData)
+          .force("center", d3.forceCenter(width / 2, height / 2))
+          .force("charge", d3.forceManyBody().strength(3))
+          .force("collision", d3.forceCollide(d => radiusScale(d["Total Passengers"]) + 1))
+          .on("tick", ticked);
+
+        node = svg.selectAll("circle")
+          .data(yearData)
+          .enter()
+          .append("circle")
+            .attr("r", d => radiusScale(d["Total Passengers"]))
+            .attr("fill", d => color(d["Top Region"]))
+            .attr("stroke", "#444")
+            .attr("stroke-width", 0.5)
+            .on("mouseover", function(event, d) {
+              tooltip
+                .style("opacity", 1)
+                .html(`<strong>${d["Operating Airline"]}</strong><br>Year: ${d.Year}<br>Region: ${d["Top Region"]}<br>Passengers: ${d["Total Passengers"].toLocaleString()}`)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 40) + "px");
+            })
+            .on("mouseout", () => tooltip.style("opacity", 0))
+            .on("click", function(event, d) {
+              node.attr("stroke", "#444").attr("stroke-width", 0.5);
+              d3.select(this).attr("stroke", "black").attr("stroke-width", 2);
+            });
+
+        function ticked() {
+          node.attr("cx", d => d.x).attr("cy", d => d.y);
+        }
+      }
+
+      drawBubbles(years[currentYearIndex]);
+
+      d3.select("#year-select").on("change", function() {
+        const selectedYear = +this.value;
+        currentYearIndex = years.indexOf(selectedYear);
+        drawBubbles(selectedYear);
+      });
+
+      d3.select("#play-btn").on("click", function() {
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+          this.textContent = "Play ▶";
+        } else {
+          intervalId = setInterval(() => {
+            currentYearIndex = (currentYearIndex + 1) % years.length;
+            d3.select("#year-select").property("value", years[currentYearIndex]);
+            drawBubbles(years[currentYearIndex]);
+          }, 1200);
+          this.textContent = "Pause ❚❚";
+        }
+      });
+    });
+  </script>
+</body>
+</html>
