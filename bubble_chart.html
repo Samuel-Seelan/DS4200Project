@@ -58,7 +58,7 @@
 
       const years = Array.from(new Set(data.map(d => d.Year))).sort((a, b) => a - b);
       const regions = Array.from(new Set(data.map(d => d["Top Region"]))).sort();
-      const color = d3.scaleOrdinal(d3.schemeSet2).domain(regions);
+      const color = d3.scaleOrdinal(d3.schemeCategory10).domain(regions);
 
       const dropdown = d3.select("#d3-chart")
         .insert("div", ":first-child")
