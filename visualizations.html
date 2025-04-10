@@ -6,141 +6,9 @@
   <title>Visualizations - SFO Air Traffic</title>
   <link rel="stylesheet" href="styles.css"/>
   <script src="https://d3js.org/d3.v7.min.js"></script>
-</head>
-<body>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
-  <header>
-    <h1>Data Visualizations</h1>
-    <nav>
-      <ul>
-        <li><a href="index.html">Home</a></li>
-      </ul>
-    </nav>
-  </header>
-
-  <section class="content">
-    <h2>Interactive D3.js Chart</h2>
-    <p>Each bubble represents one airline. Size = total passengers. Colour = most active region.</p>
-    <div id="d3-chart"></div>
-    <div class="tooltip"></div>
-
-    <script>
-    const width = Math.min(960, window.innerWidth - 40);
-    const height = 600;
-
-    const svg = d3.select("#d3-chart")
-      .append("svg")
-      .attr("width", width)
-      .attr("height", height);
-
-    const tooltip = d3.select(".tooltip");
-
-    let simulation, node;
-
-    d3.csv("d3_data.csv").then(data => {
-      data.forEach(d => {
-        d.Year = parseInt(d.Year);
-        d["Total Passengers"] = parseInt(d["Total Passengers"]);
-      });
-
-      const years = Array.from(new Set(data.map(d => d.Year))).sort((a, b) => a - b);
-      const regions = Array.from(new Set(data.map(d => d["Top Region"]))).sort();
-      const color = d3.scaleOrdinal(d3.schemeSet2).domain(regions);
-
-      const dropdown = d3.select("#d3-chart")
-        .insert("div", ":first-child")
-        .attr("class", "dropdown")
-        .html(`
-          <label for="year-select">Select Year: </label>
-          <select id="year-select">
-            ${years.map(year => `<option value="${year}">${year}</option>`).join("")}
-          </select>
-          <button id="play-btn">Play ▶</button>
-        `);
-
-      const legend = d3.select("#d3-chart")
-        .append("div")
-        .attr("class", "legend");
-
-      legend.selectAll("span")
-        .data(regions)
-        .enter()
-        .append("span")
-        .html(d => `<svg width="12" height="12"><rect width="12" height="12" fill="${color(d)}" /></svg> ${d}`);
-
-      let currentYearIndex = 0;
-      let intervalId = null;
-
-      function drawBubbles(selectedYear) {
-        const yearData = data.filter(d => d.Year === selectedYear);
-        const maxPassengers = d3.max(yearData, d => d["Total Passengers"]);
-
-        const radiusScale = d3.scaleSqrt()
-          .domain([0, maxPassengers])
-          .range([5, 50]);
-
-        svg.selectAll("*").remove();
-
-        simulation = d3.forceSimulation(yearData)
-          .force("center", d3.forceCenter(width / 2, height / 2))
-          .force("charge", d3.forceManyBody().strength(3))
-          .force("collision", d3.forceCollide(d => radiusScale(d["Total Passengers"]) + 1))
-          .on("tick", ticked);
-
-        node = svg.selectAll("circle")
-          .data(yearData)
-          .enter()
-          .append("circle")
-            .attr("r", d => radiusScale(d["Total Passengers"]))
-            .attr("fill", d => color(d["Top Region"]))
-            .attr("stroke", "#444")
-            .attr("stroke-width", 0.5)
-            .on("mouseover", function(event, d) {
-              tooltip
-                .style("opacity", 1)
-                .html(`<strong>${d["Operating Airline"]}</strong><br>Year: ${d.Year}<br>Region: ${d["Top Region"]}<br>Passengers: ${d["Total Passengers"].toLocaleString()}`)
-                .style("left", (event.pageX + 10) + "px")
-                .style("top", (event.pageY - 40) + "px");
-            })
-            .on("mouseout", () => tooltip.style("opacity", 0))
-            .on("click", function(event, d) {
-              node.attr("stroke", "#444").attr("stroke-width", 0.5);
-              d3.select(this).attr("stroke", "black").attr("stroke-width", 2);
-            });
-
-        function ticked() {
-          node
-            .attr("cx", d => d.x)
-            .attr("cy", d => d.y);
-        }
-      }
-
-      drawBubbles(years[currentYearIndex]);
-
-      d3.select("#year-select").on("change", function() {
-        const selectedYear = +this.value;
-        currentYearIndex = years.indexOf(selectedYear);
-        drawBubbles(selectedYear);
-      });
-
-      d3.select("#play-btn").on("click", function() {
-        if (intervalId) {
-          clearInterval(intervalId);
-          intervalId = null;
-          this.textContent = "Play ▶";
-        } else {
-          intervalId = setInterval(() => {
-            currentYearIndex = (currentYearIndex + 1) % years.length;
-            d3.select("#year-select").property("value", years[currentYearIndex]);
-            drawBubbles(years[currentYearIndex]);
-          }, 1200);
-          this.textContent = "Pause ❚❚";
-        }
-      });
-    });
-    </script>
-
-    <style>
+  <style>
     .tooltip {
       position: absolute;
       background: #fff;
@@ -153,7 +21,12 @@
       box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
     }
     .dropdown {
-      margin: 10px 0;
+      margin: 10px auto;
+      text-align: center;
+    }
+    .legend {
+      text-align: center;
+      margin-top: 10px;
     }
     .legend span {
       margin-right: 12px;
@@ -163,55 +36,174 @@
       display: block;
       margin: 0 auto;
     }
-    </style>
+    .viz-description {
+      max-width: 850px;
+      margin: 10px auto;
+      text-align: justify;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
 
-    <p style="max-width: 800px; margin: 40px auto 20px auto; text-align: justify; font-size: 15px;">
-      This interactive bubble chart illustrates the annual market share of airlines operating through San Francisco International Airport (SFO), using total passenger volume as a size metric. Spanning from 1999 to 2023, the chart highlights year-over-year changes in airline dominance and regional focus. Each bubble represents an airline, with its size scaled to passenger traffic and color indicating the most frequently served region. Users can explore specific years via a dropdown menu, hover over a bubble for additional information, or use the “Play” button to animate market shifts over time. Key trends include the consistent prominence of major carriers like United and Southwest, the disappearance of merged airlines such as US Airways, and the sharp contraction during the COVID-19 pandemic. This visualisation provides a clear, comparative view of competitive dynamics at SFO and complements the project’s broader temporal and spatial analyses.
-    </p>
-  </section>
+  <header>
+    <h1>Data Visualizations</h1>
+    <nav>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+      </ul>
+    </nav>
+  </header>
 
-  <section class="content">
-    <h2>Interactive Passenger Count vs COVID Timeline</h2>
-    <iframe src="assets/plots/passenger_vs_covid.html" width="100%" height="600" style="border:none;"></iframe>
-    <p class="viz-description">
-      From 1999 to 2023, SFO’s airline passenger volume generally trends upward, showing long-term growth in air travel throughout the years. Each year reveals a seasonal pattern where passenger counts peak in the summer months and dip to the lowest points in the winter for that year. This might be caused by vacation and holiday travel cycles.
-    </p>
-    <p class="viz-description">
-      A sharp and well-documented drop occurs in 2001, directly following the September 11 attacks, which significantly impacted air travel nationwide. While 2008–2010 shows a slight decline in the yearly growth rate of air travel during the global financial crisis, the change is relatively modest and less pronounced.
-    </p>
-    <p class="viz-description">
-      The biggest disruption we noticed appears to start from late 2019 and 2020, when airline passenger volume plummeted due to the start of the COVID-19 pandemic. This sudden decline prompted us to do a more in-depth focused analysis of the pandemic years.
-    </p>
-    <p class="viz-description">
-      By comparing COVID-19 hospitalization and testing trends with SFO passenger counts, we found clear inverse relationships—travel fell during periods where positive cases and hospitalizations spiked. However, as the vaccine became widely available in late 2020 and early 2021, passenger counts began to recover quickly. As of 2023, SFO’s passenger traffic has not yet fully returned to its pre-pandemic peak, highlighting the ongoing effects of the pandemic on the air travel industry.
-    </p>
-  </section>
+  <main class="intro">
+    <div class="card">
 
-  <section class="content">
-    <h2>Other Visualizations</h2>
-    <p>Other interactive charts are included in our <strong>Jupyter Notebook</strong>. Please download and view <code>sfo_visualizations.ipynb</code> for full interactivity or view static images below:</p>
+      <section class="content">
+        <h2>Interactive D3.js Chart</h2>
+        <p>Each bubble represents one airline. Size = total passengers. Colour = most active region.</p>
+        <div id="d3-chart"></div>
+        <div class="tooltip"></div>
 
-    <!-- Passenger Trend -->
-    <img src="assets/plots/passenger_trend.png" alt="Passenger Volume Over Time" />
+        <script>
+        const width = Math.min(960, window.innerWidth - 40);
+        const height = 600;
 
-    <!-- Airline Market Share / Sankey -->
-    <img src="assets/plots/airline_market_share.png" alt="Airline Market Share / Sankey" />
-    <p class="viz-description">
-      This visualization is a Sankey diagram that illustrates the flow of air traffic from specific airlines, segmented by terminals at San Francisco International Airport (SFO), to global regions. Each terminal has a unique traffic profile: Terminal 3 is dominated by United Airlines and focuses mostly on domestic U.S. routes, while Terminal 1 hosts a broader mix of domestic carriers serving Canada, Mexico, and the U.S.
-    </p>
-    <p class="viz-description">
-      Terminal 2 shows a hybrid pattern, with both domestic airlines and international carriers like Air Canada and Lufthansa connecting to Europe and Asia. The International Terminal displays the most complex network, with dozens of airlines connecting SFO to nearly every global region—especially Asia and Europe. In contrast, the "Other" category shows smaller operators (like Ameriflight and Sports Hawk) that primarily serve domestic routes.
-    </p>
-    <p class="viz-description">
-      This Sankey diagram breaks down how the operations of SFO are structured and how terminals are specialized in flying certain routes while highlighting where the largest concentration of flights are headed to.
-    </p>
+        const svg = d3.select("#d3-chart")
+          .append("svg")
+          .attr("width", width)
+          .attr("height", height);
 
-    <!-- Static COVID backup -->
-    <img src="assets/plots/covid_impact.png" alt="COVID Impact on SFO Traffic" />
+        const tooltip = d3.select(".tooltip");
 
-    <!-- Geo Map -->
-    <img src="assets/plots/geo_map.png" alt="Geographical Distribution" />
-  </section>
+        let simulation, node;
+
+        d3.csv("d3_data.csv").then(data => {
+          data.forEach(d => {
+            d.Year = parseInt(d.Year);
+            d["Total Passengers"] = parseInt(d["Total Passengers"]);
+          });
+
+          const years = Array.from(new Set(data.map(d => d.Year))).sort((a, b) => a - b);
+          const regions = Array.from(new Set(data.map(d => d["Top Region"]))).sort();
+          const color = d3.scaleOrdinal(d3.schemeSet2).domain(regions);
+
+          const dropdown = d3.select("#d3-chart")
+            .insert("div", ":first-child")
+            .attr("class", "dropdown")
+            .html(`
+              <label for="year-select">Select Year: </label>
+              <select id="year-select">
+                ${years.map(year => `<option value="${year}">${year}</option>`).join("")}
+              </select>
+              <button id="play-btn">Play ▶</button>
+            `);
+
+          const legend = d3.select("#d3-chart")
+            .append("div")
+            .attr("class", "legend");
+
+          legend.selectAll("span")
+            .data(regions)
+            .enter()
+            .append("span")
+            .html(d => `<svg width="12" height="12"><rect width="12" height="12" fill="${color(d)}" /></svg> ${d}`);
+
+          let currentYearIndex = 0;
+          let intervalId = null;
+
+          function drawBubbles(selectedYear) {
+            const yearData = data.filter(d => d.Year === selectedYear);
+            const maxPassengers = d3.max(yearData, d => d["Total Passengers"]);
+
+            const radiusScale = d3.scaleSqrt()
+              .domain([0, maxPassengers])
+              .range([5, 50]);
+
+            svg.selectAll("*").remove();
+
+            simulation = d3.forceSimulation(yearData)
+              .force("center", d3.forceCenter(width / 2, height / 2))
+              .force("charge", d3.forceManyBody().strength(3))
+              .force("collision", d3.forceCollide(d => radiusScale(d["Total Passengers"]) + 1))
+              .on("tick", ticked);
+
+            node = svg.selectAll("circle")
+              .data(yearData)
+              .enter()
+              .append("circle")
+                .attr("r", d => radiusScale(d["Total Passengers"]))
+                .attr("fill", d => color(d["Top Region"]))
+                .attr("stroke", "#444")
+                .attr("stroke-width", 0.5)
+                .on("mouseover", function(event, d) {
+                  tooltip
+                    .style("opacity", 1)
+                    .html(`<strong>${d["Operating Airline"]}</strong><br>Year: ${d.Year}<br>Region: ${d["Top Region"]}<br>Passengers: ${d["Total Passengers"].toLocaleString()}`)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 40) + "px");
+                })
+                .on("mouseout", () => tooltip.style("opacity", 0))
+                .on("click", function(event, d) {
+                  node.attr("stroke", "#444").attr("stroke-width", 0.5);
+                  d3.select(this).attr("stroke", "black").attr("stroke-width", 2);
+                });
+
+            function ticked() {
+              node.attr("cx", d => d.x).attr("cy", d => d.y);
+            }
+          }
+
+          drawBubbles(years[currentYearIndex]);
+
+          d3.select("#year-select").on("change", function() {
+            const selectedYear = +this.value;
+            currentYearIndex = years.indexOf(selectedYear);
+            drawBubbles(selectedYear);
+          });
+
+          d3.select("#play-btn").on("click", function() {
+            if (intervalId) {
+              clearInterval(intervalId);
+              intervalId = null;
+              this.textContent = "Play ▶";
+            } else {
+              intervalId = setInterval(() => {
+                currentYearIndex = (currentYearIndex + 1) % years.length;
+                d3.select("#year-select").property("value", years[currentYearIndex]);
+                drawBubbles(years[currentYearIndex]);
+              }, 1200);
+              this.textContent = "Pause ❚❚";
+            }
+          });
+        });
+        </script>
+
+        <p class="viz-description">
+          This interactive bubble chart illustrates the annual market share of airlines operating through San Francisco International Airport (SFO), using total passenger volume as a size metric. Spanning from 1999 to 2023, the chart highlights year-over-year changes in airline dominance and regional focus...
+        </p>
+      </section>
+
+      <section class="content">
+        <h2>Interactive Passenger Count vs COVID Timeline</h2>
+        <iframe src="assets/plots/passenger_vs_covid.html" width="100%" height="600" style="border:none;"></iframe>
+        <p class="viz-description">
+          From 1999 to 2023, SFO’s airline passenger volume generally trends upward...
+        </p>
+      </section>
+
+      <section class="content">
+        <h2>Other Visualizations</h2>
+        <p>Other interactive charts are included in our <strong>Jupyter Notebook</strong>. Please download and view <code>sfo_visualizations.ipynb</code> or view static images below:</p>
+
+        <img src="assets/plots/passenger_trend.png" alt="Passenger Volume Over Time" />
+        <img src="assets/plots/airline_market_share.png" alt="Airline Market Share / Sankey" />
+        <p class="viz-description">This visualization is a Sankey diagram that illustrates...</p>
+        <img src="assets/plots/covid_impact.png" alt="COVID Impact on SFO Traffic" />
+        <img src="assets/plots/geo_map.png" alt="Geographical Distribution" />
+      </section>
+    </div>
+  </main>
 
   <footer>
     <p>© 2025 Samuel Seelan, Brandon Liu, Alexander Wang — DS 4200 Project</p>
